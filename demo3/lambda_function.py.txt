@@ -1,0 +1,109 @@
+import json
+
+
+def MultiFunctionCalculatorTool(parameters):
+    def add(a, b):
+        return a+b
+
+    def subtract(a, b):
+        return a-b
+
+    def multiply(a, b):
+        return a*b
+
+    def divide(a, b):
+        if b==0:		
+            return "Cannot divide by zero"
+        else:
+            return float(a/b)
+
+    def integer_divide(a, b):
+        if b==0:		
+            return "Cannot divide by zero"
+        else:
+            return (a//b)
+
+    for parameter in parameters:
+        if 'name' in parameter and 'value' in parameter:
+            param_name = parameter['name']
+            param=param_name.strip()
+            if  param == 'oper1':
+                oper1 = float(parameter['value'].strip())
+            elif param == 'oper2':
+                oper2 = float(parameter['value'].strip())
+            elif param == 'operator':
+                operator = parameter['value'].strip()
+    
+    if operator == '+' or operator.strip() == 'add':
+        result=add(oper1, oper2)
+    elif operator == '-' or operator.strip() == 'subtract':
+        result=subtract(oper1,oper2)
+    elif operator == '*' or operator.strip() == 'multiply':
+        result=multiply(oper1, oper2)
+    elif operator == '/' or operator.strip() == 'divide':
+        result=divide(oper1,oper2)
+    elif operator == '//':
+        result=integer_divide(oper1,oper2)
+    else:
+        result="Invalid operator " + operator  
+
+    return(result)
+
+def PriceLookup(parameters):
+
+    # The following names and identifiers are used in the knowledge base as well. This is a test use case   
+    prices = {"P001":"50", "P002":"60", "P003":"70", "Y001":"1200", "Y002":"800"}
+    product_name_id_table={"string trimmer":"P001", "hedge trimmer":"P002", "leaf blower":"P003", "lawn mower":"Y001", "aerator":"Y002"}
+
+    for parameter in parameters:
+        if 'name' in parameter and 'value' in parameter:
+            param_name = parameter['name']
+            if param_name.strip() == 'productId':
+                product_id = parameter['value']
+
+    if not prices:
+        product_price="I can’t provide product details at this time. Please try back later.\n"
+    try:
+        product_price="Price of product "+product_id+" is $"+ prices.get(product_id)+"\n"
+    except:
+        try:
+            product_price="Price of product "+product_id+" is $"+ prices.get(product_name_id_table.get(product_id.lower())) +"\n" 
+        except:
+            product_price="There is no product "+product_id+" as the product name or product identifier.\n"
+
+    return product_price
+
+def lambda_handler(event, context):
+
+    agent = event.get('agent', 'default_agent_value')
+    actionGroup = event.get('actionGroup', 'default_agent_group_value')
+    function = event.get('function')
+    messageVersion=event.get('messageVersion','DRAFT')
+    parameters = event.get('parameters', [])
+    if function == "PriceLookup":
+        result = PriceLookup(parameters)
+    elif function == "MultiFunctionCalculatorTool":
+        result = MultiFunctionCalculatorTool(parameters)
+    else:
+        result = "unsupported function " +  function
+
+    responseBody =  {
+                    "TEXT": {
+                            "body":  result
+                        }
+    }
+
+
+    action_response = {
+                        'actionGroup': actionGroup,
+                        'function': function,
+                        'functionResponse': {
+                            'responseBody': responseBody
+                        }
+
+    }
+
+    function_response = {'response': action_response, 'messageVersion': messageVersion}
+    print("Response: {}".format(function_response))
+
+    return function_response
